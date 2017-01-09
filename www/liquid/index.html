@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Liquid</title>
+    <link rel="apple-touch-icon" href="img/icon-touch.png">
+    <link rel="icon" sizes="192x192" href="img/icon-touch.png">
+    <link rel="shortcut icon" href="img/favicon.ico">
+    <meta name="msapplication-TileColor" content="#20B2AA">
+    <meta name="msapplication-TileImage" content="img/icon-tile.png">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+    <style>
+      body {
+        color: black;
+        font-family: "Lucida Console", Monaco, monospace;
+        text-align: center;  
+      }
+      #status{
+        margin: 30px auto;
+      }
+      pre{
+        max-width: 400px;
+        text-align: left;
+        margin: auto;
+        background-color: #eee;
+        padding: 10px;
+      }
+      #loading{
+        display: inline-block;
+        background-image: url('img/loading.gif');
+        height: 16px;
+        width: 16px;
+        margin: 0 5px;
+      }
+      #buttons{
+      }
+      button{
+        color: white;
+        border-style: none;
+        font-size: 4em;
+        display: inline-block;
+      }
+      #on{
+        background-color: #ac2925;
+        display: none;
+      }
+      #off{
+        background-color: black;
+        display: none;
+      }
+      pre#data{
+        color: black;
+      }
+      ul{
+        padding-left: 0;
+      }
+      li{
+        list-style-type: none;
+        display: inline-block;
+        background-color: white;
+        margin: 10px;
+      }
+      li a{
+        color: black;
+        display: block;
+        padding: 10px;
+        text-decoration: none;
+      }
+    </style>
+    <script type="text/javascript" src="js/zepto.min.js"></script>
+    <script type="text/javascript">
+      var busy = false;
+      function command(s){
+        if(s != 'status'){
+          busy = true;
+          $('button').each(function(){this.disabled = true});
+          $('#loading').show();
+        }
+        $.ajax({
+          type: 'GET',
+          url: '/arduino/'+s,
+          timeout: 10000,
+          context: $('body'),
+          dataType: 'json',
+          success: function(data){
+            if(data.status){
+              $('#on').hide();
+              $('#off').show();
+              $('#status #content').text('Pump is  ON');
+              $('body').css('background-color','#337ab7');
+              $('body').css('color','white');
+            }else{
+              $('#off').hide();
+              $('#on').show();
+              $('#status #content').text('Pump is OFF');
+              $('body').css('background-color','black');
+              $('body').css('color','white');
+            }
+            busy = false;
+            $('button').each(function(){this.disabled = false});
+            $('#loading').hide();
+            $('pre#data').text(JSON.stringify(data, null, 2));
+          },
+          error: function(xhr, type){
+            $('#status #content').html('Arduino is Grumpy... <a href="/liquid/">Try Again!</a>');
+            busy = false;
+            $('button').each(function(){this.disabled = false});
+            $('#loading').hide();
+          }
+        })
+      }
+      window.setInterval(function(){
+        if(!busy){
+          command('status');
+        }
+      },5000)
+    </script>
+  </head>
+  <body>
+    <div id="status">
+      <span id="loading"></span><span id="content">Waiting for Arduino...</span>
+    </div>
+    <div id="buttons">
+      <button id="on" onClick="command('on')">ON</button>
+      <button id="off" onClick="command('off')">OFF</button>
+    </div>
+    <ul>
+      <li><a href="/arduino/on/">ON</a></li>
+      <li><a href="/arduino/off/">OFF</a></li>
+      <li><a href="/arduino/toggle/">Toggle</a></li>
+      <li><a href="/arduino/status/">Status</a></li>
+      <li><a href="/arduino/stop/">Stop!</a></li>
+    </ul>
+    <pre id="data">Loading...</pre>
+  </body>
+</html>
