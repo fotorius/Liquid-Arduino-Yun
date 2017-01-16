@@ -46,7 +46,7 @@ unsigned long int pumpOff = 0;
 unsigned long int pumpOn = 0;
 unsigned long int currentTime = 0;
 int delayCounter = 0;
-int feedCounter = 1;
+int feedCounter = 2;
 int pumpOnTime = 0;
 boolean pumpStatus;
 
@@ -191,7 +191,7 @@ void loop() {
       setPumpOn(pumpOnTime);
       futurePumpOn(PUMP_PERIOD);
       
-      if(!feedCounter){
+      if(feedCounter <= 1){
         feedCounter = FEED_PERIOD;
         feed(2,10);
       }else{
@@ -262,18 +262,18 @@ void printData(void){
 
   // Print time for the next feed
   lcd.setCursor(0, 1);
-  if(feedCounter>0){
-    buff = String(feedCounter);
+  if(feedCounter>1){
+    buff = String(feedCounter-1);
     lcd.print("Feed: "+buff+" hr");
-    if(feedCounter != 1)
+    if(feedCounter != 2)
       lcd.print("s ");
     else
       lcd.print(" ");
   }else{
     if(seconds)
-      lcd.print("Feed: "+buff+" sec");
+      lcd.print("Feed: "+buff+" sec ");
     else
-      lcd.print("Feed: "+buff+" min");
+      lcd.print("Feed: "+buff+" min ");
   }
 }
 
