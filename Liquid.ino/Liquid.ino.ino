@@ -9,8 +9,11 @@
 
 #define PUMP_PIN 13
 #define SERVO_PIN 11
-#define FEED_BUTTON_PIN 3
+#define FEED_BUTTON_PIN 12
 #define PUMP_BUTTON_PIN 2
+#define MAX_PUMP_ON 45 // seconds
+//#define SPRINKLER_PIN 3
+//#define PIEZO_PIN 7
 
 #define PUMP_PERIOD 3600
 
@@ -49,11 +52,15 @@ int delayCounter = 0;
 int feedCounter = 2;
 int pumpOnTime = 0;
 boolean pumpStatus;
+//uint8_t sprinkler = 0; //How many times the sprinkler was activated
+
 
 void setup() {
   // Bridge startup
   pinMode(PUMP_PIN, OUTPUT);
   digitalWrite(PUMP_PIN, LOW);
+  //pinMode(SPRINKLER_PIN, OUTPUT);
+  //digitalWrite(SPRINKLER_PIN, LOW);
   Bridge.begin();
 
   // Start Server
@@ -89,7 +96,9 @@ void setup() {
   // Buttons and interrupts
   pinMode(FEED_BUTTON_PIN, INPUT_PULLUP);
   pinMode(PUMP_BUTTON_PIN, INPUT_PULLUP);
-  //attachInterrupt(digitalPinToInterrupt(FEED_BUTTON_PIN), feedButtonISR, FALLING);
+  //pinMode(PIEZO_PIN, INPUT);
+  
+  //attachInterrupt(digitalPinToInterrupt(PIEZO_PIN), piezoISR, RISING);
   //attachInterrupt(digitalPinToInterrupt(PUMP_BUTTON_PIN), pumpButtonISR, FALLING);
 }
 
@@ -196,7 +205,7 @@ void loop() {
         feed(2,10);
       }else{
         feedCounter--;
-    }
+      }
     }else{
       digitalWrite(PUMP_PIN, pumpStatus);
     }
@@ -204,7 +213,7 @@ void loop() {
     delayCounter--;
   }
   // Get pump on time value
-  pumpOnTime = map(analogRead(A0),0, 1023, 0, 32);
+  pumpOnTime = map(analogRead(A0),0, 1023, 0, MAX_PUMP_ON);
 
   // Print data on LCD
   printData();
@@ -221,15 +230,17 @@ void loop() {
 
 
 void printPumpOnTime(void){
-  // Each square represents 10 seconds
+  const byte squares = 3;  // 3 squares
+  const byte lines = 5;    // Lines per square
+  const byte seconds = MAX_PUMP_ON/squares; // Each square represents X seconds
   int i;
   int tmp,tmp2,tmp3;
   tmp3 = pumpOnTime;
-  for(i=0;i<3;i++){
+  for(i=0;i<squares;i++){
     tmp2 = (tmp3)/2;
-    tmp = (tmp2 > 5) ? 5:int(tmp2);
+    tmp = (tmp2 > lines) ? lines:int(tmp2);
     lcd.write(byte(tmp));
-    tmp3 -=10;
+    tmp3 -= seconds;
     tmp3 = (tmp3 > 0) ? tmp3:0;
   }
 }
@@ -275,6 +286,16 @@ void printData(void){
     else
       lcd.print("Feed: "+buff+" min ");
   }
+
+  //Sprinkler
+  //lcd.setCursor(13, 1);
+  //if(sprinkler < 10){
+  //  lcd.print(" ");
+  //}
+  //if(sprinkler < 100){
+  //  lcd.print(" ");
+  //}
+  //lcd.print(sprinkler);
 }
 
 boolean checkPump(void){
@@ -355,3 +376,8 @@ void pumpButtonISR(void){
     futurePumpOn(PUMP_PERIOD);
   }
 }
+
+//void piezoISR(){
+//  digitalWrite(SPRINKLER_PIN,!digitalRead(SPRINKLER_PIN));
+//  sprinkler++;
+//}
