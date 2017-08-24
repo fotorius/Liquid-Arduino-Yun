@@ -1,0 +1,44 @@
+Liquid: Automating watering plants and feesh feeding using an Arduno Yun
+
+Alfredo Rius
+alfredo.rius@gmail.com
+
+v1.4   2017-08-21
+Removed servo enable pin
+Detach servo after feeding
+
+v1.3   2017-08-18
+Added servo feeder
+Working with TimerThree interrupts
+Added feeder button
+Added servo enable pin
+
+v1.2   2017-08-03
+Added water level sensor
+Display shows:
+  - Time remining for next pump
+  - Pump time
+  - Water level OK/ERR
+  - Temperature Sensor
+
+v1.1   
+Added Air Pump
+Added Temperature Sensor
+Display shows:
+  - Time remining for next pump
+  - Pump time
+  - Temperature Sensor
+
+v1.0 
+Removed feeder
+Working with TimerOne interrupts
+
+v0.1   2017-01-15
+It Works
+System activates feeder every 12 hrs
+System activates the pump every 1 hr
+Pump time can be manually adjusted
+Display shows:
+  - Time remining for next pump
+  - Pump time
+  - Time remining for next feed
