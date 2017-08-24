@@ -1,5 +1,5 @@
 /*
-  Liquid: Automating watering plants using an Arduno Yun
+  Liquid: Automating watering plants and fish feeding using an Arduno Yun
 
   Alfredo Rius
   alfredo.rius@gmail.com
