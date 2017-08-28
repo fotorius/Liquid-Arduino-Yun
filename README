@@ -3,6 +3,12 @@ Liquid: Automating watering plants and fish feeding using an Arduno Yun
 Alfredo Rius
 alfredo.rius@gmail.com
 
+v1.5   2017-08-28
+Removed clear screen button due to hardware improvements
+Added flow sensor
+Added flow sensor measurements
+Fixed printPumpOnTime
+
 v1.4   2017-08-21
 Removed servo enable pin
 Detach servo after feeding
