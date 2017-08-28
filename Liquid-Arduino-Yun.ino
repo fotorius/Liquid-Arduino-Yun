@@ -4,6 +4,12 @@
   Alfredo Rius
   alfredo.rius@gmail.com
 
+  v1.5   2017-08-28
+  Removed clear screen button due to hardware improvements
+  Added flow sensor
+  Added flow sensor measurements
+  Fixed printPumpOnTime
+  
   v1.4   2017-08-21
   Removed servo enable pin
   Detach servo after feeding
@@ -51,11 +57,12 @@
 #define POT_PIN A0
 #define LEVEL_PIN A1
 #define PUMP_BUTTON_PIN 2
-#define CLEAR_DISP_BUTTON_PIN 3
+//#define CLEAR_DISP_BUTTON_PIN 3
+#define FLOW_SENSOR_PIN 3
 #define FEEDER_BUTTON_PIN 7
 #define SERVO_PIN 5
 #define ONE_WIRE_BUS 12
-#define MAX_PUMP_ON 180 // seconds
+#define MAX_PUMP_ON 900 // X = 450;  X/0.45 = 1 Liter
 #define TEMP_DELAY 20 // Refresh temperature every X seconds
 
 #define SERVO_MAX 100
@@ -96,8 +103,9 @@ byte block0Char[8] = {0xE0,0xE0,0xE0,0xE0,0xE0,0xE0,0xE0,0xE0};
 String startString;
 long hits = 0;
 unsigned long nextPump = PUMP_PERIOD;
-unsigned long pumpOff = 0;
-unsigned long pumpOnTime = 0;
+unsigned long pumpTimeOffset = 0;
+long pumpOff = 0;
+long pumpOn = 0;
 boolean pumpState;
 boolean firstPumpRun = true;
 boolean firstFeedRun = true;
@@ -109,6 +117,7 @@ unsigned long debounceFilter = 0;
 unsigned long freqDiv = FREQ_DIV;
 unsigned long lastProximity = 0;
 unsigned long proximity = 0;
+unsigned long flowCounter = 0;
 float temp;
 
 
@@ -130,12 +139,11 @@ void printData(void){
 
   // Print next pump
   lcd.setCursor(0, 0);
-  if(pumpState && pumpOff>60){
-    buff = String(pumpOff/60);//next pump in minutes
-    lcd.print("Pump: "+buff+" min ");
-  }else if(pumpState){
-    buff = String(pumpOff);
-    lcd.print("Pump: "+buff+" sec ");
+  if(pumpState){
+    lcd.print("Pump:           ");
+    lcd.setCursor(6, 0);
+    buff = String((int)(flowCounter/0.450));
+    lcd.print(""+buff+" mL ");
   }else if(nextPump>60){
     buff = String(nextPump/60);//next pump in minutes
     lcd.print("Pump: "+buff+" min ");
@@ -167,16 +175,17 @@ float getTemp(void){
 void printPumpOnTime(void){
   const byte squares = 3;  // 3 squares
   const byte lines = 5;    // Lines per square
-  const int seconds = MAX_PUMP_ON/squares; // Each square represents X seconds
+  const int counts = MAX_PUMP_ON/squares; // Each square represents X counts
+  const int fact = MAX_PUMP_ON/squares/lines;
   int i;
   int tmp,tmp2,tmp3;
   lcd.setCursor(13, 0);
-  tmp3 = pumpOnTime;
+  tmp3 = pumpOn;
   for(i=0;i<squares;i++){
-    tmp2 = (tmp3)/2;
+    tmp2 = tmp3/fact;
     tmp = (tmp2 > lines) ? lines:int(tmp2);
     lcd.write(byte(tmp));
-    tmp3 -= seconds;
+    tmp3 -= counts;
     tmp3 = (tmp3 > 0) ? tmp3:0;
   }
 }
@@ -185,16 +194,22 @@ void printPumpOnTime(void){
 void togglePump(void){
   if(pumpState){
     // Deactivate Pump
-    nextPump = PUMP_PERIOD - pumpOnTime;
-    pumpOff = pumpOnTime;
+    nextPump = PUMP_PERIOD - pumpTimeOffset;
+    pumpOff = pumpOn;
     pumpState = false;
     digitalWrite(PUMP_PIN,LOW);
   }else{
     // Activate Pump
     nextPump = 0;
-    pumpOff = pumpOnTime;
+    pumpOff = pumpOn;
     pumpState = true;
+    flowCounter = 0; // Initialize flow counter
+    pumpTimeOffset = 0; // Initialize pump time offset
     digitalWrite(PUMP_PIN,!digitalRead(LEVEL_PIN));
+    // FEEDER
+    if(feedCounter){
+      feedCounter--;
+    }
   }
 }
 
@@ -220,6 +235,18 @@ void clearDispButtonISR(void){
     debounceFilter = millis()+DEBOUNCE_FILTER;
   }
   firstPumpRun = false;
+}
+void flowSensorISR(void){
+  flowCounter++;
+  if(flowCounter>pumpOn){
+    pumpState = false;
+    nextPump = PUMP_PERIOD - pumpTimeOffset;
+    digitalWrite(PUMP_PIN,LOW);
+    if(!feedCounter){
+      feedCounter = FEEDER_PERIOD;
+      feedState = true;
+    }
+  }
 }
 
 
@@ -254,34 +281,24 @@ void feed(int times, int d){
 
 void timerCount(void){ // Every 100 ms
   if(!freqDiv){ // Every Second
-    if(!nextPump){
-      if(pumpOff && pumpState){
-        pumpOff -= 1;
-      }else if(!pumpOff && !pumpState){
-        pumpOff = pumpOnTime;
+    if(!nextPump){// Pump timer ended
+      if(!pumpState){
+        pumpOff = pumpOn;
         pumpState = true;
-      }else{
-        pumpState = false;
-        nextPump = PUMP_PERIOD - pumpOnTime;
-
+        flowCounter = 0; // Initialize flow counter
+        pumpTimeOffset = 0; // Initialize pump time offset
+        digitalWrite(PUMP_PIN,!digitalRead(LEVEL_PIN));
         // FEEDER
-        if(!feedCounter){
-          feedCounter = FEEDER_PERIOD;
-          feedState = true;
-        }else{
+        if(feedCounter){
           feedCounter--;
         }
-
-        
       }
-      digitalWrite(PUMP_PIN,!digitalRead(LEVEL_PIN));
+      pumpTimeOffset ++;
     }else{
       nextPump -= 1;
       digitalWrite(PUMP_PIN,LOW);
     }
 
-
-    
     if(!interrupted){
       interrupted = true;
       printData();
@@ -294,7 +311,7 @@ void timerCount(void){ // Every 100 ms
     freqDiv = FREQ_DIV;
   }
   
-  pumpOnTime = map(analogRead(POT_PIN),0, 1023, 0, MAX_PUMP_ON);
+  pumpOn = map(analogRead(POT_PIN),0, 1023, 0, MAX_PUMP_ON);
   
   if(!interrupted){
     interrupted = true;
@@ -313,8 +330,9 @@ void setup(void){
   pinMode(AIR_PUMP_PIN, OUTPUT);
   digitalWrite(PUMP_PIN, LOW);
   pinMode(PUMP_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(FEEDER_BUTTON_PIN, INPUT);
-  pinMode(CLEAR_DISP_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(FEEDER_BUTTON_PIN, INPUT_PULLUP);
+  //pinMode(CLEAR_DISP_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(FLOW_SENSOR_PIN, INPUT);
   pinMode(LEVEL_PIN, INPUT_PULLUP);
 
   // Servo
@@ -327,7 +345,7 @@ void setup(void){
 
   // Screen says hello!
   lcd.setCursor(0, 0);
-  lcd.print("Liquid      v1.4");
+  lcd.print("Liquid      v1.5");
   lcd.setCursor(0, 1);
   lcd.print("                ");
   delay(3000);
@@ -337,7 +355,8 @@ void setup(void){
   
   // Interrupt Setup
   attachInterrupt(digitalPinToInterrupt(PUMP_BUTTON_PIN), pumpButtonISR, FALLING);
-  attachInterrupt(digitalPinToInterrupt(CLEAR_DISP_BUTTON_PIN), clearDispButtonISR, FALLING);
+  //attachInterrupt(digitalPinToInterrupt(CLEAR_DISP_BUTTON_PIN), clearDispButtonISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR_PIN), flowSensorISR, RISING);
   
 
   Timer3.initialize(100000); // 100 ms
@@ -423,6 +442,12 @@ void loop(void){
       client.println(" \"feed_counter\":"+buff+",");
       buff = String(digitalRead(AIR_PUMP_PIN));
       client.println(" \"air_pump\":"+buff+",");
+      buff = String(flowCounter);
+      client.println(" \"flow_counter\":"+buff+",");
+      buff = String((float)flowCounter/0.450);
+      client.println(" \"last_volume\":"+buff+",");
+      buff = String((float)pumpOn/0.450);
+      client.println(" \"next_volume\":"+buff+",");
       buff = String(temp);
       client.println(" \"temperature\":"+buff);
       client.print("}");
@@ -434,7 +459,7 @@ void loop(void){
   if(feedState){
     feed(FEED_TIMES,10);
   }
-  if(digitalRead(FEEDER_BUTTON_PIN)){
+  if(!digitalRead(FEEDER_BUTTON_PIN)){
     feed(1,10);
   }
 }
