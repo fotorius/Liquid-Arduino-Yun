@@ -4,6 +4,9 @@
   Alfredo Rius
   alfredo.rius@gmail.com
 
+  v1.5.1 2017-08-28
+  Refresh screen every minute
+
   v1.5   2017-08-28
   Removed clear screen button due to hardware improvements
   Added flow sensor
@@ -62,7 +65,7 @@
 #define FEEDER_BUTTON_PIN 7
 #define SERVO_PIN 5
 #define ONE_WIRE_BUS 12
-#define MAX_PUMP_ON 900 // X = 450;  X/0.45 = 1 Liter
+#define MAX_PUMP_ON 300 // X = 450;  X/0.45 = 1 Liter
 #define TEMP_DELAY 20 // Refresh temperature every X seconds
 
 #define SERVO_MAX 100
@@ -70,6 +73,7 @@
 
 #define PUMP_PERIOD 3600 // Every hour
 #define FEEDER_PERIOD (long)8 // Every 8 hours
+#define CLEAR_DISP_PERIOD 60 //Every minute
 #define AIR_PUMP_THR 55*60 // 55 min every hour
 
 #define DEBOUNCE_FILTER 500
@@ -118,6 +122,7 @@ unsigned long freqDiv = FREQ_DIV;
 unsigned long lastProximity = 0;
 unsigned long proximity = 0;
 unsigned long flowCounter = 0;
+unsigned long clearDispCounter = 0;
 float temp;
 
 
@@ -229,13 +234,10 @@ void feederButtonISR(void){
   firstPumpRun = false;
 }
 
-void clearDispButtonISR(void){
-  if(debounceFilter<millis() && !firstPumpRun){
+void clearDisp(void){
     resetLCD();
-    debounceFilter = millis()+DEBOUNCE_FILTER;
-  }
-  firstPumpRun = false;
 }
+
 void flowSensorISR(void){
   flowCounter++;
   if(flowCounter>pumpOn){
@@ -297,6 +299,15 @@ void timerCount(void){ // Every 100 ms
     }else{
       nextPump -= 1;
       digitalWrite(PUMP_PIN,LOW);
+    }
+
+    if(clearDispCounter){
+      clearDispCounter --;
+    }else if(!interrupted){
+      interrupted = true;
+      clearDisp();
+      clearDispCounter = CLEAR_DISP_PERIOD;
+      interrupted = false;
     }
 
     if(!interrupted){
