@@ -3,6 +3,10 @@ Liquid: Automating watering plants and fish feeding using an Arduno Yun
 Alfredo Rius
 alfredo.rius@gmail.com
 
+v1.6   2017-09-10
+Removed flow as a constraint to turn off the pump
+(flow sensor got stocked)
+
 v1.5.1 2017-08-28
 Refresh screen every minute
 
