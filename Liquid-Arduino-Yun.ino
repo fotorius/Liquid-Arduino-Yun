@@ -119,6 +119,7 @@ boolean firstPumpRun = true;
 boolean firstFeedRun = true;
 boolean interrupted = false;
 boolean feedState = false;
+boolean dayTime = true;
 unsigned long feedCounter = FEEDER_PERIOD;
 unsigned int readTemp = TEMP_DELAY;
 unsigned long debounceFilter = 0;
@@ -196,18 +197,27 @@ void printPumpOnTime(void){
   }
 }
 
+long getPumpOn(void){
+  
+  // Set different times depending on daytime
+  
+  if(dayTime)
+    return pumpOn;
+  else
+    return pumpOn/2;
+}
 
 void togglePump(void){
   if(pumpState){
     // Deactivate Pump
     nextPump = PUMP_PERIOD - pumpTimeOffset;
-    pumpOff = pumpOn;
+    pumpOff = getPumpOn();
     pumpState = false;
     digitalWrite(PUMP_PIN,LOW);
   }else{
     // Activate Pump
     nextPump = 0;
-    pumpOff = pumpOn;
+    pumpOff = getPumpOn();
     pumpState = true;
     flowCounter = 0; // Initialize flow counter
     pumpTimeOffset = 0; // Initialize pump time offset
@@ -434,6 +444,18 @@ void loop(void){
     if (command == "feed") {
       command = "status";
     }
+    
+    // Feed
+    if (command == "day_time/1") {
+      dayTime = true;
+      command = "status";
+    }
+    
+    // Feed
+    if (command == "day_time/0") {
+      dayTime = false;
+      command = "status";
+    }
 
     // Get status
     if (command == "status") {
@@ -450,6 +472,8 @@ void loop(void){
         buff = String(nextPump);
         client.println(" \"next_pump\":"+buff+",");
       }
+      buff = String(dayTime);
+      client.println(" \"day_time\":"+buff+",");
       buff = String(!digitalRead(LEVEL_PIN));
       client.println(" \"level\":"+buff+",");
       buff = String(feedCounter);
@@ -460,6 +484,8 @@ void loop(void){
       client.println(" \"flow_counter\":"+buff+",");
       buff = String((float)flowCounter/0.450);
       client.println(" \"last_volume\":"+buff+",");
+      buff = String(getPumpOn());
+      client.println(" \"pump_time\":"+buff+",");
       buff = String(temp);
       client.println(" \"temperature\":"+buff);
       client.print("}");
