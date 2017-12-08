@@ -3,6 +3,9 @@ Liquid: Automating watering plants and fish feeding using an Arduno Yun
 Alfredo Rius
 alfredo.rius@gmail.com
 
+v1.7   2017-12-08
+Added Day Time mode, dispense half water during night time.
+
 v1.6   2017-09-10
 Removed flow as a constraint to turn off the pump
 (flow sensor got stocked)

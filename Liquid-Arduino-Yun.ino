@@ -5,6 +5,9 @@
   alfredo.rius@gmail.com
 
 
+  v1.7   2017-12-08
+  Added Day Time mode, dispense half water during night time.
+
   v1.6   2017-09-10
   Removed flow as a constraint to turn off the pump
   (flow sensor got stocked)
@@ -370,7 +373,7 @@ void setup(void){
 
   // Screen says hello!
   lcd.setCursor(0, 0);
-  lcd.print("Liquid      v1.6");
+  lcd.print("Liquid      v1.7");
   lcd.setCursor(0, 1);
   lcd.print("                ");
   delay(3000);
